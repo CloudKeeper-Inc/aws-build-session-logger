@@ -1,0 +1,15 @@
+unclassified:
+  awsBuildSessionLogger:
+    managedAuthentication: true
+    observeOnly: false
+    jobNamePattern: "team-a/.*"
+    jobNameExcludePattern: "team-a/experimental"
+    attributeUnprofiledAsNodeRole: true
+    credentialSource: "EcsContainer"
+    profiles:
+      - name: "non_prod"
+        mode: "AssumeRole"
+        roleArn: "arn:aws:iam::123456789012:role/non_prod"
+        region: "us-east-1"
+      - name: "ops"
+        mode: "InstanceProfile"

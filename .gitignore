@@ -1,0 +1,13 @@
+target
+# mvn hpi:run
+work
+
+# IDE files
+*.iml
+*.iws
+*.ipr
+.idea
+.settings
+.classpath
+.project
+.vscode

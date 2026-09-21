@@ -1,0 +1,6 @@
+<?jelly escape-by-default='true'?>
+<div>
+    Gives every AWS call a Jenkins build makes a build-attributable STS session name,
+    jk-JOB-BUILD, so CloudTrail shows which build did what. Works with the AWS CLI, SDKs and
+    Terraform unchanged, by decorating the agent's own AWS configuration.
+</div>

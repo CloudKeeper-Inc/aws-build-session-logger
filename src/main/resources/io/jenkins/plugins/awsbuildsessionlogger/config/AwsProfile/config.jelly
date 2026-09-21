@@ -1,0 +1,23 @@
+<?jelly escape-by-default='true'?>
+<j:jelly xmlns:j="jelly:core" xmlns:f="/lib/form">
+  <f:entry title="Profile name" field="name"
+           description="The name pipelines already use, e.g. the 'non_prod' in 'aws --profile non_prod'.">
+    <f:textbox/>
+  </f:entry>
+  <f:entry title="Authentication mode" field="mode"
+           description="Assume role for cross-account access, audited in CloudTrail as jk-JOB-BUILD. Instance profile for same-account access, where there is nothing to assume.">
+    <f:select/>
+  </f:entry>
+  <f:entry title="Role ARN" field="roleArn"
+           description="Required in assume-role mode. Not used in instance-profile mode.">
+    <f:textbox/>
+  </f:entry>
+  <f:entry title="Region" field="region" description="Optional.">
+    <f:textbox/>
+  </f:entry>
+  <f:entry title="">
+    <div align="right">
+      <f:repeatableDeleteButton/>
+    </div>
+  </f:entry>
+</j:jelly>

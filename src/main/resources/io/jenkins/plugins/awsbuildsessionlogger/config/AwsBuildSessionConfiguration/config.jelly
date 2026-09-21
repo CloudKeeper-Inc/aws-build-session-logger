@@ -1,0 +1,53 @@
+<?jelly escape-by-default='true'?>
+<j:jelly xmlns:j="jelly:core" xmlns:f="/lib/form">
+  <f:section title="AWS Build Session Logger">
+    <f:entry
+        title="Managed authentication"
+        field="managedAuthentication"
+        description="When enabled, Jenkins prepares AWS authentication for every Pipeline build in scope. Pipelines need no wrapper, no plugin step and no changes: the profiles the agent already defines keep working, and gain the session name jk-JOB-BUILD. Off by default. Turning it off never disturbs a running build — builds already under way finish under their existing session.">
+      <f:checkbox/>
+    </f:entry>
+
+    <f:entry
+        title="Apply to jobs matching"
+        field="jobNamePattern"
+        description="Optional regular expression, matched against a job's FULL name (e.g. uat/Backend/deploy) in its entirety. Blank applies to every Pipeline and Freestyle job. Use this to roll out one job or one folder at a time. An invalid expression matches nothing, so a typo narrows the rollout rather than widening it.">
+      <f:textbox/>
+    </f:entry>
+
+    <f:entry
+        title="Except jobs matching"
+        field="jobNameExcludePattern"
+        description="Optional regular expression, same matching rules. Evaluated after the include pattern and wins over it. Blank excludes nothing. This is the switch to reach for during an incident: excluding one job needs no restart and leaves every other job attributed.">
+      <f:textbox/>
+    </f:entry>
+
+    <f:entry
+        title="Attribute unprofiled calls as the node's OWN instance role"
+        field="attributeUnprofiledAsNodeRole"
+        description="Attributes the AWS calls that name no profile — every bare 'aws' command, and 'aws ecr get-login-password'. These fall through to the agent's base identity, whose session name EC2 fixes to the instance ID, so they are unattributable unless a role is assumed on their behalf. This is roughly 98% of all AWS calls on a typical controller: without it, very little is actually audited. Each node is asked for its own instance role over IMDS when a build prepares, so every agent is correct by construction — including agents that do not exist yet. Self-assume is deliberate: the principal ARN stays identical, so bucket, key and repository policies that grant access by principal ARN keep working, where a different role with the same permissions would be denied by all of them. Fail-safe in two ways: a node that reports no instance role, and a node whose role AWS will not permit to assume itself, are both left exactly as they are today and logged — unattributed, never broken.">
+      <f:checkbox/>
+    </f:entry>
+
+    <f:entry
+        title="Agent base identity"
+        field="credentialSource"
+        description="Leave this alone unless the Jenkins AGENTS themselves run on ECS/EKS — this is about where the agent process runs, not where your applications are deployed. It answers one question: when a profile assumes a role, where do the starting credentials come from? Ec2InstanceMetadata for EC2 agents (the usual case), EcsContainer for agents running as ECS/Fargate tasks, Environment when the agent already has credentials in its environment. It applies ONLY to the [default] section this plugin writes for unprofiled attribution. Every profile copied from the agent's own configuration keeps whatever it already says.">
+      <f:select/>
+    </f:entry>
+
+    <f:entry
+        title="Observe only (prepare everything, export nothing)"
+        field="observeOnly"
+        description="Dry run across every job in scope. Every in-scope build reads its agent's AWS configuration, decorates it, runs the safety check and reports what it WOULD have done — and exports nothing at all, so no build can see this plugin or be affected by it. Turn this on, widen the scope to every job, let a day of real traffic run, then read the evidence and turn it off. This exists because a guard that only catches exceptions cannot catch a contribution that succeeds and still takes something away. It is how you find that class of problem BEFORE it reaches anyone, without watching the build queue all day.">
+      <f:checkbox/>
+    </f:entry>
+
+    <f:entry
+        title="Diagnostics"
+        field="diagnostics"
+        description="Prints what the plugin found on the agent and what it changed — configuration path, sections found, decorated and appended, and the exported values. Non-sensitive throughout: no file contents and no credentials. Safe to turn on during an investigation and off again afterwards, with no restart.">
+      <f:checkbox/>
+    </f:entry>
+  </f:section>
+</j:jelly>
