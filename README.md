@@ -66,7 +66,7 @@ written to disk.
 
 ## Requirements
 
-- Jenkins 2.555.3 or newer, Java 17 or newer.
+- Jenkins 2.555.3 or newer, which itself requires Java 21.
 - **Linux or macOS agents.** On Windows agents the plugin contributes nothing (it cannot
   set file permissions), and builds run exactly as they would without it.
 - The `aws` CLI on agents, but only if you use unprofiled attribution or the

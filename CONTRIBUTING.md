@@ -13,7 +13,7 @@ Thanks for helping. Bug reports, fixes, tests and documentation are all welcome.
 
 ## Building and testing
 
-You need JDK 17 or 21 and Maven 3.9+.
+You need JDK 21 and Maven 3.9+ (Jenkins 2.555.x requires Java 21).
 
 ```sh
 mvn verify                      # build, format check, all tests
