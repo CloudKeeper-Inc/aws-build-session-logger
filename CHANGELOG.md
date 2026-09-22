@@ -14,3 +14,4 @@ First public release.
 - `withAwsBuildRole` block step for assuming one specific role explicitly.
 - Configuration as Code support under `unclassified.awsBuildSessionLogger`.
 - Warns at load time when a profile's role ARN is malformed.
+- README: optional IAM enforcement guide (trust-policy conditions and an agent-role deny), with its limits.

@@ -147,10 +147,10 @@ for security.
 - **Anyone who can edit a Jenkinsfile can bypass it.** They can export their own AWS
   credentials, point `AWS_CONFIG_FILE` elsewhere, or call `sts assume-role` with any
   session name they like, including a fake `jk-` name.
-- **For enforcement, use IAM.** A trust-policy condition on your target roles
-  (`"StringLike": {"sts:RoleSessionName": "jk-*"}`) makes AWS refuse sessions without the
-  build prefix. CloudTrail alerts on session names that don't start with `jk-` catch
-  whatever the plugin missed.
+- **For enforcement, use IAM.** See
+  [*Enforcing it with IAM*](#enforcing-it-with-iam-optional-hardening) below: trust-policy
+  conditions and a deny on the agent role make AWS refuse unlabelled calls. CloudTrail
+  alerts on session names that don't start with `jk-` catch whatever is left.
 
 ### Known limitations
 
@@ -181,6 +181,81 @@ for security.
   roles by session name. `jk-…` is attributed. `i-…` is an unprofiled call that wasn't
   covered. `aws-go-sdk-…` and `botocore-session-…` are tools that assumed a role
   themselves.
+
+## Enforcing it with IAM (optional hardening)
+
+The plugin labels calls; IAM can then **require** the label. This turns "unattributed but
+working" into "denied", so it also turns every plugin miss into a failed build. Do it in
+this order, and measure before each step.
+
+### 1. Measure first
+
+Use CloudTrail (see above) to list every call your Jenkins roles make under a session name
+that isn't `jk-…`, over at least a week. Each one is something the steps below will deny.
+Expect to find more than builds: the controller itself (for example the EC2 plugin
+launching agents), the SSM agent, the CloudWatch agent and credential helpers all use the
+instance role.
+
+### 2. Give the controller its own role
+
+If the controller and the agents share one instance role, you can't restrict one without
+the other. Give the controller a separate role, and don't run builds on the built-in node.
+Everything below applies to the **agent** role only.
+
+### 3. Require `jk-` session names on the roles builds assume
+
+In the trust policy of each **target** role that builds assume:
+
+```json
+{
+  "Effect": "Allow",
+  "Principal": { "AWS": "arn:aws:iam::111111111111:role/jenkins-agent" },
+  "Action": "sts:AssumeRole",
+  "Condition": { "StringLike": { "sts:RoleSessionName": "jk-*" } }
+}
+```
+
+For the agent role's trust of **itself** (unprofiled attribution), allow the probe name as
+well: `"sts:RoleSessionName": ["jk-*", "aws-build-session-logger-probe"]`.
+
+If a tool assumes a *further* role from a target role (a Terraform provider's `assume_role`
+block), the same condition on that further role will deny it unless the tool sets
+`session_name` to a `jk-` value.
+
+### 4. Deny the agent role's own unlabelled calls
+
+An identity policy on the **agent** role that denies everything except AssumeRole unless the
+session is a `jk-` session. `aws:userid` for a role session is `<role unique ID>:<session
+name>`. Get the ID with `aws iam get-role --role-name jenkins-agent --query Role.RoleId`.
+
+```json
+{
+  "Effect": "Deny",
+  "NotAction": [
+    "sts:AssumeRole",
+    "ssm:*", "ssmmessages:*", "ec2messages:*"
+  ],
+  "Resource": "*",
+  "Condition": {
+    "StringNotLike": { "aws:userid": "AROAEXAMPLEROLEID:jk-*" }
+  }
+}
+```
+
+The `ssm*` / `ec2messages` entries keep Session Manager working on the agents. Add whatever
+else step 1 showed your agents need outside builds (CloudWatch agent, logging, and so on).
+
+### What this still doesn't do
+
+- **Session names can be forged.** A Jenkinsfile can call
+  `aws sts assume-role --role-session-name jk-anything-1`, and the steps above allow it. A
+  `jk-` name tells you which build a call *claims* to be; CloudTrail's source IP and the
+  build logs are what corroborate it.
+- **Other credentials aren't covered.** Static access keys in a Jenkins credential, or roles
+  other than the agent role, never meet these policies. Watch for them in CloudTrail.
+- **The plugin becomes load-bearing.** Anything that stops it contributing — an agent that
+  can't self-assume, a Windows agent, a declined contribution — now fails the build instead
+  of running unlabelled. Roll out in a non-production account first.
 
 ## Documentation
 
